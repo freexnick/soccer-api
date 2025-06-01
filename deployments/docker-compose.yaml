@@ -1,0 +1,53 @@
+services:
+    db:
+        container_name: soccer-api_postgres_db
+        image: postgres:16.3-alpine3.19
+        env_file:
+            - ../configs/.env
+        ports:
+            - ":${POSTGRES_PORT:-5432}"
+        networks:
+            - soccer-api
+        volumes:
+            - soccer-api_postgres_db:/data/db
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        restart: always
+    adminer:
+        container_name: soccer-api_adminer
+        image: adminer:4.8.1-standalone
+        environment:
+            - ADMINER_DEFAULT_SERVER=soccer-api_postgres_db
+        networks:
+            - soccer-api
+        ports:
+            - ":8080"
+        restart: always
+    server:
+        container_name: soccer-api_server
+        build:
+            context: ../
+            dockerfile: ./deployments/server.dockerfile
+            args:
+                APP_VERSION: ${APP_VERSION:-dev}
+                GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+        env_file:
+            - ../configs/.env
+        depends_on:
+            db:
+                condition: service_healthy
+        ports:
+            - ":${HTTP_SERVER_ADDRESS:-7777}" 
+        networks:
+            - soccer-api
+        restart: always
+networks:
+    soccer-api:
+        driver: bridge
+        name: soccer-api
+volumes:
+    soccer-api_postgres_db:
