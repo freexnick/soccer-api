@@ -6,7 +6,7 @@ MIGRATION_PATH ?= internal/infrastructure/database/migrations
 MIGRATE_IMAGE ?= migrate/migrate:v4.18.3
 PROJECT_NAME ?= soccer-api
 COMPOSE_FILE := ./deployments/docker-compose.yaml
-STATIC_CHECKS := all,-ST1000
+STATIC_CHECKS := all,-ST1000,-ST1003
 
 .PHONY: lint create-migration apply-migrations rollback-migration run build stop logs
 
@@ -71,10 +71,12 @@ run:
 	APP_VERSION=$(APP_VERSION) GIT_COMMIT_SHA=$(GIT_COMMIT_SHA) \
 		docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) up --build -d
 
+run-auto: run apply-migrations
+
 build:
 	@echo "Building Docker images with APP_VERSION=$(APP_VERSION) and GIT_COMMIT_SHA=$(GIT_COMMIT_SHA)..."
 	APP_VERSION=$(APP_VERSION) GIT_COMMIT_SHA=$(GIT_COMMIT_SHA) \
-		docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) build --no-cache server swagger-ui
+		docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_NAME) build --no-cache server
 
 stop:
 	@echo "Stopping and removing services, networks, and volumes..."

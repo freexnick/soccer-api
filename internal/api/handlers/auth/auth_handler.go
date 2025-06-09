@@ -4,41 +4,55 @@ import (
 	"errors"
 	"net/http"
 
+	"soccer-api/internal/api/apicontext"
 	"soccer-api/internal/api/helpers"
 	"soccer-api/internal/api/request"
 	"soccer-api/internal/api/response"
 	"soccer-api/internal/domain/entity"
-	"soccer-api/internal/domain/service/auth"
+	authService "soccer-api/internal/domain/service/auth"
 	"soccer-api/internal/infrastructure/observer"
-	"soccer-api/internal/localization"
+	localizationService "soccer-api/internal/localization"
 )
 
 type Auth struct {
-	AuthService         *service.Auth
-	Observer            *observer.Observer
-	LocalizationService *localization.Service
+	authService         *authService.Auth
+	observer            *observer.Observer
+	localizationService *localizationService.Service
 }
 
 func New(c Configuration) *Auth {
 	return &Auth{
-		AuthService:         c.AuthService,
-		Observer:            c.Observer,
-		LocalizationService: c.LocalizationService,
+		authService:         c.AuthService,
+		observer:            c.Observer,
+		localizationService: c.LocalizationService,
 	}
 }
 
 func (a *Auth) SignUp(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	localizer := apicontext.GetLocalizer(ctx)
 
 	var req request.RegisterRequest
 	if err := helpers.ReadJSON(w, r, &req); err != nil {
-		helpers.BadRequestResponse(w, err)
+		msg := a.localizationService.GetMessage(localizer, localizationService.MsgBadRequestError)
+		helpers.BadRequestResponse(w, msg)
 		return
 	}
 
-	user, err := a.AuthService.Register(ctx, &entity.User{Email: req.Email, Password: req.Password}, "")
+	user, err := a.authService.Register(ctx, &entity.User{Email: req.Email, Password: req.Password}, "")
 	if err != nil {
-		helpers.BadRequestResponse(w, err)
+		switch {
+		case errors.Is(err, authService.ErrValidationFailed):
+			msg := a.localizationService.GetMessage(localizer, authService.MsgValidationFailed)
+			helpers.BadRequestResponse(w, msg)
+
+		case errors.Is(err, authService.ErrUserAlreadyExists):
+			msg := a.localizationService.GetMessage(localizer, authService.MsgUserAlreadyExists)
+			helpers.BadRequestResponse(w, msg)
+		default:
+			msg := a.localizationService.GetMessage(localizer, localizationService.MsgInternalServerError)
+			helpers.ServerErrorResponse(w, msg)
+		}
 		return
 	}
 
@@ -48,27 +62,32 @@ func (a *Auth) SignUp(w http.ResponseWriter, r *http.Request) {
 		Token:  user.Token,
 	}
 
-	if err := helpers.WriteJSON(w, http.StatusCreated, respUser, nil); err != nil {
-		a.Observer.Error(ctx, errors.New("AuthHandler.SignUp: WriteJSON for success response failed"))
-	}
+	helpers.WriteJSON(w, http.StatusCreated, respUser, nil)
 }
 
 func (a *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	localizer := apicontext.GetLocalizer(ctx)
 
 	var req request.LoginRequest
 	if err := helpers.ReadJSON(w, r, &req); err != nil {
-		helpers.BadRequestResponse(w, err)
+		msg := a.localizationService.GetMessage(localizer, localizationService.MsgBadRequestError)
+		helpers.BadRequestResponse(w, msg)
 		return
 	}
 
-	user, err := a.AuthService.Login(ctx, &entity.User{Email: req.Email, Password: req.Password})
+	user, err := a.authService.Login(ctx, &entity.User{Email: req.Email, Password: req.Password})
 	if err != nil {
-		helpers.BadRequestResponse(w, err)
+		switch {
+		case errors.Is(err, authService.ErrInvalidCredentials):
+			msg := a.localizationService.GetMessage(localizer, authService.MsgInvalidCredentials)
+			helpers.BadRequestResponse(w, msg)
+		default:
+			msg := a.localizationService.GetMessage(localizer, localizationService.MsgInternalServerError)
+			helpers.ServerErrorResponse(w, msg)
+		}
 		return
 	}
 
-	if err := helpers.WriteJSON(w, http.StatusOK, user, nil); err != nil {
-		a.Observer.Error(ctx, errors.New("AuthHandler.SignIn: WriteJSON for success response failed"))
-	}
+	helpers.WriteJSON(w, http.StatusOK, user, nil)
 }

@@ -11,6 +11,9 @@ import (
 
 	"soccer-api/internal/api"
 	authHandler "soccer-api/internal/api/handlers/auth"
+	playerHandler "soccer-api/internal/api/handlers/player"
+	teamHandler "soccer-api/internal/api/handlers/team"
+	transferHandler "soccer-api/internal/api/handlers/transfer"
 	authMW "soccer-api/internal/api/middlewares/auth"
 	localMW "soccer-api/internal/api/middlewares/localization"
 	observMW "soccer-api/internal/api/middlewares/observer"
@@ -18,10 +21,20 @@ import (
 	"soccer-api/internal/config"
 	"soccer-api/internal/domain/repository"
 	authService "soccer-api/internal/domain/service/auth"
+	coutnryService "soccer-api/internal/domain/service/country"
+	playerService "soccer-api/internal/domain/service/player"
+	randomService "soccer-api/internal/domain/service/random"
+	teamService "soccer-api/internal/domain/service/team"
 	tokenService "soccer-api/internal/domain/service/token"
+	transferService "soccer-api/internal/domain/service/transfer"
+	txService "soccer-api/internal/domain/service/uow"
 	userService "soccer-api/internal/domain/service/user"
 	"soccer-api/internal/infrastructure/database"
 	"soccer-api/internal/infrastructure/database/gorm/auth"
+	"soccer-api/internal/infrastructure/database/gorm/player"
+	"soccer-api/internal/infrastructure/database/gorm/team"
+	"soccer-api/internal/infrastructure/database/gorm/transfer"
+	"soccer-api/internal/infrastructure/database/gorm/uow"
 	"soccer-api/internal/infrastructure/database/gorm/user"
 	"soccer-api/internal/infrastructure/observer"
 	"soccer-api/internal/infrastructure/observer/logger"
@@ -35,20 +48,32 @@ type Application struct {
 	server  server.Lifecycle
 	db      database.Client
 
-	userRepository  repository.User
-	authRepository  repository.Auth
-	tokenRepository repository.Token
+	txRepo             repository.TransactionManager
+	userRepository     repository.User
+	authRepository     repository.Auth
+	tokenRepository    repository.Token
+	teamRepository     repository.Team
+	playerRepository   repository.Player
+	transferRepository repository.Transfer
 
+	txService           *txService.TxManager
 	userService         *userService.User
 	authService         *authService.Auth
 	tokenService        *tokenService.Token
+	teamService         *teamService.Team
+	playerService       *playerService.Player
+	countryService      *coutnryService.Country
+	randomService       *randomService.Random
 	localizationService *localization.Service
+	transferService     *transferService.Transfer
+	authMW              *authMW.AuthMiddleware
+	observMW            *observMW.ObserverMiddleware
+	localMW             *localMW.LocalizationMiddleware
 
-	authMW   *authMW.AuthMiddleware
-	observMW *observMW.ObserverMiddleware
-	localMW  *localMW.LocalizationMiddleware
-
-	authHandler *authHandler.Auth
+	authHandler     *authHandler.Auth
+	teamHandler     *teamHandler.Team
+	playerHandler   *playerHandler.Player
+	transferHandler *transferHandler.Transfer
 }
 
 func New(ctx context.Context) (*Application, error) {
@@ -109,10 +134,12 @@ func (a *Application) setObserver(ctx context.Context, conf *config.Configuratio
 }
 
 func (a *Application) setStorages(ctx context.Context, conf *config.Configuration) error {
+	maxLifetime := time.Duration(conf.PostgresConnMaxLifetimeMin) * time.Minute
+	maxIdleTime := time.Duration(conf.PostgresConnMaxIdleTimeMin) * time.Minute
 	db, err := database.New(ctx, database.Configuration{
 		ConnectionURL:   conf.PostgresURL,
-		MaxConnLifeTime: time.Duration(conf.PostgresConnMaxLifetimeMin),
-		MaxConnIdleTime: time.Duration(conf.PostgresConnMaxIdleTimeMin),
+		MaxConnLifeTime: maxLifetime,
+		MaxConnIdleTime: maxIdleTime,
 	})
 
 	if err != nil {
@@ -125,8 +152,12 @@ func (a *Application) setStorages(ctx context.Context, conf *config.Configuratio
 }
 
 func (a *Application) setRepositories(conf *config.Configuration) error {
+	a.txRepo = uow.New(a.db.Client)
 	a.userRepository = user.New(a.db.Client)
+	a.playerRepository = player.New(a.db.Client)
+	a.teamRepository = team.New(a.db.Client)
 	a.authRepository = auth.New(a.db.Client)
+	a.transferRepository = transfer.New(a.db.Client)
 	a.tokenRepository = token.New(token.Configuration{
 		JWTExpiryMinutes: time.Duration(conf.JWTExpiryMinutes),
 		JWTIssuer:        conf.JWTIssuer,
@@ -137,19 +168,44 @@ func (a *Application) setRepositories(conf *config.Configuration) error {
 }
 
 func (a *Application) setServices() error {
-	a.userService = userService.New(a.userRepository)
-	a.tokenService = tokenService.New(a.tokenRepository)
-	a.authService = authService.New(authService.Configuration{
-		AuthRepo:  a.authRepository,
-		UserRepo:  a.userRepository,
-		TokenRepo: a.tokenRepository,
-	})
 	localizationService, err := localization.New()
 	if err != nil {
 		return err
 	}
 
 	a.localizationService = localizationService
+	a.txService = txService.New(txService.Configuration{
+		TxManager: a.txRepo,
+	})
+	a.userService = userService.New(a.userRepository)
+	a.tokenService = tokenService.New(a.tokenRepository)
+	a.randomService = randomService.New()
+	a.countryService = coutnryService.New()
+	a.playerService = playerService.New(playerService.Configuration{
+		TxService:      *a.txService,
+		PlayerRepo:     a.playerRepository,
+		RandomService:  *a.randomService,
+		CountryService: *a.countryService,
+	})
+	a.teamService = teamService.New(teamService.Configuration{
+		TxService:      *a.txService,
+		TeamRepo:       a.teamRepository,
+		UserService:    *a.userService,
+		PlayerService:  *a.playerService,
+		CountryService: *a.countryService,
+	})
+	a.transferService = transferService.New(transferService.Configuration{
+		TransferRepo:  a.transferRepository,
+		TxService:     *a.txService,
+		PlayerService: *a.playerService,
+	})
+	a.authService = authService.New(authService.Configuration{
+		TxService:    *a.txService,
+		AuthRepo:     a.authRepository,
+		UserService:  *a.userService,
+		TokenService: *a.tokenService,
+		TeamService:  *a.teamService,
+	})
 
 	return nil
 }
@@ -158,11 +214,12 @@ func (a *Application) setMiddlewares() error {
 	a.observMW = observMW.New(observMW.Configuration{
 		Observer: a.observ,
 	})
-	a.authMW = authMW.New(authMW.Configuration{
-		TokenService: *a.tokenService,
-		Observer:     a.observ,
-	})
 	a.localMW = localMW.New(localMW.Configuration{
+		LocalizationService: a.localizationService,
+	})
+	a.authMW = authMW.New(authMW.Configuration{
+		TokenService:        *a.tokenService,
+		Observer:            a.observ,
 		LocalizationService: a.localizationService,
 	})
 
@@ -171,8 +228,27 @@ func (a *Application) setMiddlewares() error {
 
 func (a *Application) setRouteHandlers() error {
 	a.authHandler = authHandler.New(authHandler.Configuration{
-		AuthService: a.authService,
-		Observer:    a.observ,
+		AuthService:         a.authService,
+		Observer:            a.observ,
+		LocalizationService: a.localizationService,
+	})
+
+	a.teamHandler = teamHandler.New(teamHandler.Configuration{
+		TeamService:         a.teamService,
+		Observer:            a.observ,
+		LocalizationService: a.localizationService,
+	})
+
+	a.playerHandler = playerHandler.New(playerHandler.Configuration{
+		PlayerService:       a.playerService,
+		Observer:            a.observ,
+		LocalizationService: a.localizationService,
+	})
+
+	a.transferHandler = transferHandler.New(transferHandler.Configuration{
+		TransferService:     a.transferService,
+		Observer:            a.observ,
+		LocalizationService: a.localizationService,
 	})
 
 	return nil
@@ -189,6 +265,9 @@ func (a *Application) setRoutes(conf *config.Configuration) error {
 		AuthMiddleware:         a.authMW,
 		LocalizationMiddleware: a.localMW,
 		AuthHandler:            a.authHandler,
+		TeamHandler:            a.teamHandler,
+		TransferHandler:        a.transferHandler,
+		PlayerHandler:          a.playerHandler,
 		AuthService:            a.authService,
 		TokenService:           a.tokenService,
 		UserService:            a.userService,

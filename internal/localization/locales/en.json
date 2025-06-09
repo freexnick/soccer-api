@@ -1,0 +1,119 @@
+{
+    "error": {
+        "internal_server": "An internal server error occurred. Please try again later.",
+        "bad_request": "The request was malformed or contained invalid data.",
+        "invalid_request_body": "The request body is invalid, malformed, or incomplete.",
+        "validation_failed": "Validation failed. Please check the provided data.",
+        "no_update_fields": "No fields were provided for the update operation.",
+        "resource": {
+            "not_found": "The requested resource could not be found."
+        }
+    },
+    "auth": {
+        "error": {
+            "unauthorized": "Authentication is required to access this resource.",
+            "forbidden": "You do not have permission to perform this action.",
+            "user_already_exists": "An account with this email already exists.",
+            "invalid_credentials": "Invalid email or password.",
+            "session_creation_failed": "Could not prepare your session. Please try logging in again.",
+            "user_details_retrieval_failed": "Registration processed, but an issue occurred retrieving your details."
+        },
+        "message": {
+            "registration_successful": "Registration successful. Welcome!",
+            "login_successful": "Login successful."
+        }
+    },
+    "user": {
+        "error": {
+            "not_found": "User not found."
+        }
+    },
+    "team": {
+        "error": {
+            "not_found": "Team not found.",
+            "update_no_fields": "Please provide a new name or country to update your team.",
+            "user_has_no_team": "The current user does not have an associated team."
+        },
+        "message": {
+            "updated_successfully": "Team details updated successfully."
+        }
+    },
+    "player": {
+        "error": {
+            "not_found": "Player not found.",
+            "not_owned": "You do not have permission to modify this player as they are not on your team.",
+            "update_no_fields": "Please provide at least one field to update (first name, last name, or country).",
+            "cannot_be_unassigned": "Player is not currently assigned to any team.",
+            "listing_permission_denied": "You do not have permission to manage this player's transfer listing.",
+            "listing_price_invalid": "A positive asking price is required to list a player for transfer.",
+            "already_listed": "This player is already on the transfer list.",
+            "not_listed": "This player is not currently on the transfer list."
+        },
+        "message": {
+            "updated_successfully": "Player details updated successfully."
+        },
+        "label": {
+            "position": {
+                "goalkeeper": "Goalkeeper",
+                "defender": "Defender",
+                "midfielder": "Midfielder",
+                "attacker": "Attacker"
+            }
+        }
+    },
+    "transfer": {
+        "error": {
+            "price_required": "A positive asking price is required to list a player for transfer.",
+            "player_not_listed": "This player is not currently on the transfer list.",
+            "player_already_listed": "This player is already listed for transfer.",
+            "cannot_buy_own": "You cannot buy a player from your own team.",
+            "not_enough_budget": "Your team does not have enough budget for this purchase.",
+            "purchase_failed": "The player purchase could not be completed due to an unexpected error."
+        },
+        "message": {
+            "list_successful": "Player has been successfully listed for transfer.",
+            "unlist_successful": "Player has been removed from the transfer list.",
+            "purchase_successful": "Player purchased successfully!"
+        }
+    },
+    "validation": {
+        "error": {
+            "invalid_country": "The provided country '{{.Value}}' is not recognized. Please use a valid country name.",
+            "invalid_player_id": "Invalid player ID format.",
+            "invalid_team_id": "Invalid team ID format.",
+            "field_required": "{{.FieldName}} is required."
+        }
+    },
+    "country": {
+        "Germany": "Germany",
+        "Belgium": "Belgium",
+        "France": "France",
+        "Portugal": "Portugal",
+        "Spain": "Spain",
+        "Scotland": "Scotland",
+        "Turkey": "Turkey",
+        "Austria": "Austria",
+        "England": "England",
+        "Hungary": "Hungary",
+        "Slovakia": "Slovakia",
+        "Albania": "Albania",
+        "Denmark": "Denmark",
+        "Netherlands": "Netherlands",
+        "Romania": "Romania",
+        "Switzerland": "Switzerland",
+        "Serbia": "Serbia",
+        "Italy": "Italy",
+        "Czechia": "Czechia",
+        "Slovenia": "Slovenia",
+        "Croatia": "Croatia",
+        "Georgia": "Georgia",
+        "Ukraine": "Ukraine",
+        "Poland": "Poland",
+        "Brazil": "Brazil",
+        "Argentina": "Argentina",
+        "United_States": "United States",
+        "Japan": "Japan",
+        "Canada": "Canada",
+        "Australia": "Australia"
+    }
+}

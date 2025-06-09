@@ -5,7 +5,7 @@ services:
         env_file:
             - ../configs/.env
         ports:
-            - ":${POSTGRES_PORT:-5432}"
+            - "${POSTGRES_HOST_PORT:-5432}:5432"
         networks:
             - soccer-api
         volumes:
@@ -25,7 +25,7 @@ services:
         networks:
             - soccer-api
         ports:
-            - ":8080"
+            - "${ADMINER_HOST_PORT:-8080}:8080"
         restart: always
     server:
         container_name: soccer-api_server
@@ -41,7 +41,7 @@ services:
             db:
                 condition: service_healthy
         ports:
-            - ":${HTTP_SERVER_ADDRESS:-7777}" 
+            - "${SERVER_HOST_PORT:-7777}:${HTTP_SERVER_ADDRESS:-7777}"
         networks:
             - soccer-api
         restart: always

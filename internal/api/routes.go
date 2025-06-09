@@ -26,6 +26,9 @@ func New(conf Configuration) http.Handler {
 
 		r.Group(func(r chi.Router) {
 			r.Use(conf.AuthMiddleware.Authenticate)
+			routes.TeamRoutes(r, conf.TeamHandler)
+			routes.PlayerRoutes(r, conf.PlayerHandler)
+			routes.TransferRoutes(r, conf.TransferHandler)
 		})
 	})
 

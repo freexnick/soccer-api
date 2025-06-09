@@ -9,6 +9,8 @@ import (
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
+
+	"soccer-api/internal/domain/entity"
 )
 
 //go:embed locales/*.json
@@ -76,4 +78,82 @@ func (s *Service) GetMessage(localizer *i18n.Localizer, messageID string, templa
 		return fmt.Sprintf("[%s - TranslationMissingOrError]", messageID)
 	}
 	return msg
+}
+
+func (s *Service) LocalizePlayerPosition(localizer *i18n.Localizer, position entity.PlayerPosition) string {
+	var messageID string
+
+	switch position {
+	case entity.Goalkeeper:
+		messageID = LblPositionGoalkeeper
+	case entity.Defender:
+		messageID = LblPositionDefender
+	case entity.Midfielder:
+		messageID = LblPositionMidfielder
+	case entity.Attacker:
+		messageID = LblPositionAttacker
+	default:
+		messageID = string(position)
+	}
+
+	return s.GetMessage(localizer, messageID)
+}
+
+func (s *Service) LocalizeCountry(localizer *i18n.Localizer, country entity.Country) string {
+	var messageID string
+
+	switch country {
+	case entity.GERMANY:
+		messageID = LblCountryGermany
+	case entity.BELGIUM:
+		messageID = LblCountryBelgium
+	case entity.FRANCE:
+		messageID = LblCountryFrance
+	case entity.PORTUGAL:
+		messageID = LblCountryPortugal
+	case entity.SPAIN:
+		messageID = LblCountrySpain
+	case entity.SCOTLAND:
+		messageID = LblCountryScotland
+	case entity.TURKEY:
+		messageID = LblCountryTurkey
+	case entity.AUSTRIA:
+		messageID = LblCountryAustria
+	case entity.ENGLAND:
+		messageID = LblCountryEngland
+	case entity.HUNGARY:
+		messageID = LblCountryHungary
+	case entity.SLOVAKIA:
+		messageID = LblCountrySlovakia
+	case entity.ALBANIA:
+		messageID = LblCountryAlbania
+	case entity.DENMARK:
+		messageID = LblCountryDenmark
+	case entity.NETHERLANDS:
+		messageID = LblCountryNetherlands
+	case entity.ROMANIA:
+		messageID = LblCountryRomania
+	case entity.SWITZERLAND:
+		messageID = LblCountrySwitzerland
+	case entity.SERBIA:
+		messageID = LblCountrySerbia
+	case entity.ITALY:
+		messageID = LblCountryItaly
+	case entity.CZECHIA:
+		messageID = LblCountryCzechia
+	case entity.SLOVENIA:
+		messageID = LblCountrySlovenia
+	case entity.CROATIA:
+		messageID = LblCountryCroatia
+	case entity.GEORGIA:
+		messageID = LblCountryGeorgia
+	case entity.UKRAINE:
+		messageID = LblCountryUkraine
+	case entity.POLAND:
+		messageID = LblCountryPoland
+	default:
+		messageID = string(country)
+	}
+
+	return s.GetMessage(localizer, messageID)
 }

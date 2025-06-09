@@ -3,25 +3,23 @@ package auth
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"soccer-api/internal/domain/entity"
-	"soccer-api/internal/domain/repository"
-	"soccer-api/internal/infrastructure/database/gorm/user"
+	"soccer-api/internal/infrastructure/database/gorm/models"
 )
 
-type auth struct {
-	modal user.UserModel
+type Auth struct {
+	modal models.UserModel
 	db    *gorm.DB
 }
 
-func New(db *gorm.DB) repository.Auth {
-	return &auth{db: db}
+func New(db *gorm.DB) *Auth {
+	return &Auth{db: db}
 }
 
-func (a *auth) Login(ctx context.Context, userCredentials *entity.User) (*entity.Credentials, error) {
-	var currentUser user.UserModel
+func (a *Auth) Login(ctx context.Context, userCredentials *entity.User) (*entity.Credentials, error) {
+	var currentUser models.UserModel
 
 	if err := a.db.WithContext(ctx).Where("email = ?", userCredentials.Email).First(&currentUser).Error; err != nil {
 		return nil, err
@@ -30,15 +28,14 @@ func (a *auth) Login(ctx context.Context, userCredentials *entity.User) (*entity
 	return nil, nil
 }
 
-func (a *auth) Register(ctx context.Context, user *entity.User, token string) (*entity.Credentials, error) {
-	user.ID = uuid.New()
-	newUser := a.modal.FromDomain(user)
+func (a *Auth) Register(ctx context.Context, user *entity.User, token string) (*entity.Credentials, error) {
+	newUser := a.modal.ToUserModal(user)
 
 	if err := a.db.WithContext(ctx).Create(&newUser).Error; err != nil {
 		return nil, err
 	}
 
-	registeredUser := newUser.ToDomain()
+	registeredUser := newUser.ToUserEntity()
 
 	credentials := entity.Credentials{
 		ID:    registeredUser.ID,

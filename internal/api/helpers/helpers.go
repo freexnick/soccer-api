@@ -83,22 +83,18 @@ func ErrorResponse(w http.ResponseWriter, status uint16, message any) {
 	}
 }
 
-func BadRequestResponse(w http.ResponseWriter, err error) {
-	ErrorResponse(w, http.StatusBadRequest, err.Error())
+func BadRequestResponse(w http.ResponseWriter, message string) {
+	ErrorResponse(w, http.StatusBadRequest, message)
 }
 
-func ServerErrorResponse(w http.ResponseWriter, internalErr error) {
-	fmt.Printf("INTERNAL SERVER ERROR (to be logged with observer): %v\n", internalErr)
-	ErrorResponse(w, http.StatusInternalServerError, "The server encountered an unexpected problem.")
+func ServerErrorResponse(w http.ResponseWriter, message string) {
+	ErrorResponse(w, http.StatusInternalServerError, message)
 }
 
 func UnauthorizedResponse(w http.ResponseWriter, message string) {
-	if message == "" {
-		message = "Authentication required."
-	}
 	ErrorResponse(w, http.StatusUnauthorized, message)
 }
 
-func NotFoundResponse(w http.ResponseWriter, r *http.Request) {
-	ErrorResponse(w, http.StatusNotFound, fmt.Sprintf("The requested resource '%s' was not found.", r.URL.Path))
+func NotFoundResponse(w http.ResponseWriter, message string) {
+	ErrorResponse(w, http.StatusNotFound, message)
 }
